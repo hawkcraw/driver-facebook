@@ -2,6 +2,7 @@
 
 namespace BotMan\Drivers\Facebook;
 
+use BotMan\Drivers\Facebook\Events\MessageEchoes;
 use BotMan\Drivers\Facebook\Events\Standby;
 use BotMan\BotMan\Drivers\Events\GenericEvent;
 use BotMan\BotMan\Drivers\HttpDriver;
@@ -148,6 +149,13 @@ class FacebookDriver extends HttpDriver implements VerifiesService
 
             $this->driverEvent = new Standby($standby);
 
+            return $this->driverEvent;
+        }
+
+        $echo_message = Collection::make($this->event->get('messaging'))->first();
+        if(Arr::get($echo_message,'message.is_echo')){// new webhook event is_echo
+
+            $this->driverEvent = new MessageEchoes($echo_message);
             return $this->driverEvent;
         }
 
@@ -383,7 +391,8 @@ class FacebookDriver extends HttpDriver implements VerifiesService
          * the text and append the question.
          */
         if ($message instanceof Question) {
-            $parameters['message'] = $this->convertQuestion($message);
+            unset($parameters['message']['text']);
+            $parameters['message'] = array_merge_recursive($parameters['message'],$this->convertQuestion($message));
         } elseif (is_object($message) && in_array(get_class($message), $this->templates)) {
             unset($parameters['message']['text']);
             $parameters['message'] = array_merge_recursive($parameters['message'],$message->toArray());
